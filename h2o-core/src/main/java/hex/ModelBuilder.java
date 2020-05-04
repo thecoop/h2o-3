@@ -77,6 +77,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
   protected ModelBuilder(P parms, Key<M> key) {
     _job = new Job<>(_result = key, parms.javaName(), parms.algoName());
     _parms = parms;
+    _input_parms = (P) parms.clone();
   }
 
   /** Shared pre-existing Job and unique new result key */
@@ -84,6 +85,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     _job = job;
     _result = defaultKey(parms.algoName());
     _parms = parms;
+    _input_parms = (P) parms.clone();
   }
 
   /** List of known ModelBuilders with all default args; endlessly cloned by
@@ -250,7 +252,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
         Scope.enter();
         _parms.read_lock_frames(_job); // Fetch & read-lock input frames
         computeImpl();
-        setInputValues();
+        computeParameters();
         saveModelCheckpointIfConfigured();
       } finally {
         _parms.read_unlock_frames(_job);
@@ -279,10 +281,15 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
 
     public abstract void computeImpl();
 
-    public final void setInputValues() {
+    public final void computeParameters() {
       M model = _result.get();
       if (model != null) {
+        //set input parameters
         model.setInputParms(_input_parms);
+        //set _fold_assignment param to null in case it was entered as AUTO and it wasn't set during the training
+        if (model._input_parms._fold_assignment == Model.Parameters.FoldAssignmentScheme.AUTO && model._parms._fold_assignment == Model.Parameters.FoldAssignmentScheme.AUTO) {
+          model._parms._fold_assignment = null;
+        }
       }
     }
   }
@@ -761,7 +768,8 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
       mbs[i] = cvModel.scoreMetrics(adaptFr);
       if (nclasses() == 2 /* need holdout predictions for gains/lift table */
               || _parms._keep_cross_validation_predictions
-              || (_parms._distribution== DistributionFamily.huber /*need to compute quantiles on abs error of holdout predictions*/)) {
+              || (_parms._distribution== DistributionFamily.huber
+              || _parms._distribution == DistributionFamily.AUTO/*need to compute quantiles on abs error of holdout predictions*/)) {
         String predName = cvModelBuilders[i].getPredictionKey();
         cvModel.predictScoreImpl(cvValid, adaptFr, predName, _job, true, CFuncRef.NOP);
         DKV.put(cvModel);
