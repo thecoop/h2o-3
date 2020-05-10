@@ -12,8 +12,10 @@ import hex.genmodel.easy.exception.PredictException;
 import hex.genmodel.easy.prediction.*;
 import hex.genmodel.utils.DistributionFamily;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import water.*;
 import water.api.ModelsHandler;
+import water.api.RestApiExtension;
 import water.api.StreamWriter;
 import water.api.StreamingSchema;
 import water.api.schemas3.KeyV3;
@@ -22,6 +24,7 @@ import water.codegen.CodeGeneratorPipeline;
 import water.exceptions.JCodeSB;
 import water.fvec.*;
 import water.parser.BufferedString;
+import water.parser.ParseTime;
 import water.persist.Persist;
 import water.udf.CFuncRef;
 import water.util.*;
@@ -504,6 +507,92 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
     Frame makeInteractions(Frame f);
   }
 
+  private static IcedHashMap<String, Object> createNodeInformationMap() {
+    IcedHashMap<String, Object> map = new IcedHashMap<>();
+    
+    for (int i = 0; i < H2O.CLOUD.members().length; i++) {
+      //create node info map for each node
+      map.put("Node " + i, createEachNodeInformationMap(i));
+    }
+    return map;
+  }
+
+  private static IcedHashMap<String, Object> createEachNodeInformationMap(int memberIndex) {
+    IcedHashMap<String, Object> map = new IcedHashMap<>();
+    H2ONode currentMember = H2O.CLOUD.members()[memberIndex];
+    
+    map.put("node", memberIndex);
+    map.put("h2o", currentMember.getIpPortString());
+    map.put("healthy", Boolean.toString(currentMember.isHealthy()));
+    map.put("last_ping", currentMember._last_heard_from);
+    map.put("num_cpus", (int) currentMember._heartbeat._num_cpus);
+    map.put("sys_load", currentMember._heartbeat._system_load_average);
+    map.put("mem_value_size", currentMember._heartbeat.get_kv_mem());
+    map.put("free_mem", currentMember._heartbeat.get_free_mem());
+    map.put("pojo_mem", currentMember._heartbeat.get_pojo_mem());
+    map.put("swap_mem", currentMember._heartbeat.get_swap_mem());
+    map.put("free_disc", currentMember._heartbeat.get_free_disk());
+    map.put("max_disc", currentMember._heartbeat.get_max_disk());
+    map.put("pid", currentMember._heartbeat._pid);
+    map.put("num_keys", currentMember._heartbeat._keys);
+    map.put("tcps_active", Character.toString(currentMember._heartbeat._tcps_active));
+    map.put("open_fds", currentMember._heartbeat._process_num_open_fds);
+    map.put("rpcs_active", Character.toString(currentMember._heartbeat._rpcs));
+    map.put("nthreads", (int) currentMember._heartbeat._nthreads);
+    map.put("is_leader", memberIndex == H2O.CLOUD.leader().index() ? true : false);
+    map.put("total_mem", currentMember._heartbeat.get_total_mem());
+    map.put("max_mem", currentMember._heartbeat.get_max_mem());
+    map.put("java_version", currentMember._heartbeat.get_java_version());
+    map.put("jvm_launch_parameters", currentMember._heartbeat.get_jvm_launch_parameters());
+    map.put("jvm_pid", currentMember._heartbeat.get_jvm_pid());
+    map.put("os_version", currentMember._heartbeat.get_os_version());
+    map.put("machine_physical_mem", currentMember._heartbeat.get_machine_psysical_mem());
+    map.put("machine_locale", currentMember._heartbeat.get_machine_locale());
+
+    return map;
+  }
+  
+  private static IcedHashMap<String, Object> createClusterConfigurationMap() {
+    IcedHashMap<String, Object> map = new IcedHashMap<>();
+    H2ONode[] members = H2O.CLOUD.members();
+    long freeMem = 0;
+    int totalCores = 0;
+    int clusterAllowedCores = 0;
+    int unhealthlyNodes = 0;
+    boolean locked = Paxos._cloudLocked;
+    for (int i = 0; i < members.length; i++) {
+      freeMem += members[i]._heartbeat.get_free_mem();
+      totalCores += members[i]._heartbeat._num_cpus;
+      clusterAllowedCores += members[i]._heartbeat._cpus_allowed;
+      if (!members[i].isHealthy()) unhealthlyNodes++;
+    }
+    String status = locked ? "locked" : "accepting new members";
+    status += unhealthlyNodes > 0 ? ", " + unhealthlyNodes + " nodes are not healthly" : ", healthly";
+    String apiExtensions = "";
+    for (RestApiExtension ext : ExtensionManager.getInstance().getRestApiExtensions()) {
+      if (apiExtensions.isEmpty())
+        apiExtensions += ext.getName();
+      else
+        apiExtensions += ", " + ext.getName();
+    }
+    
+    map.put("H2O cluster uptime", System.currentTimeMillis() - H2O.START_TIME_MILLIS.get());
+    map.put("H2O cluster timezone", DateTimeZone.getDefault().toString());
+    map.put("H2O data parsing timezone", ParseTime.getTimezone().toString());
+    map.put("H2O cluster version", H2O.ABV.projectVersion());
+    map.put("H2O cluster version age", PrettyPrint.toAge(H2O.ABV.compiledOnDate(), new Date()));
+    map.put("H2O cluster name", H2O.ARGS.name);
+    map.put("H2O cluster total nodes", H2O.ARGS.name);
+    map.put("H2O cluster free memory", freeMem);
+    map.put("H2O cluster total cores", totalCores);
+    map.put("H2O cluster allowed cores", clusterAllowedCores);
+    map.put("H2O cluster status", status);
+    map.put("H2O internal security",  Boolean.toString(H2OSecurityManager.instance().securityEnabled));
+    map.put("H2O API Extensions",  apiExtensions);
+
+    return map;
+  }
+  
   public static class InteractionSpec extends Iced {
     private String[] _columns;
     private StringPair[] _pairs;
@@ -741,6 +830,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
       _hasFold = b.hasFoldCol();
       _distribution = b._distribution;
       _priorClassDist = b._priorClassDist;
+      _reproducibility_information_map = createReproducibilityInformationMap(b);
       assert(_job==null);  // only set after job completion
       _defaultThreshold = -1;
     }
@@ -785,6 +875,14 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
      * User-facing model summary - Display model type, complexity, size and other useful stats
      */
     public TwoDimTable _model_summary;
+
+    /**
+     * Reproducibility information describing the current cluster configuration, each node configuration
+     * and checksums for each frame used on the input of the algorithm
+     */
+
+    public IcedHashMap<String, Object> _reproducibility_information_map;
+    
 
     /**
      * User-facing model scoring history - 2D table with modeling accuracy as a function of time/trees/epochs/iterations, etc.
@@ -936,6 +1034,25 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
       if (_cross_validation_metrics!=null) sb.append(_cross_validation_metrics.toString());
       printTwoDimTables(sb, this);
       return sb.toString();
+    }
+
+    public IcedHashMap<String, Object> createInputFramesInformationMap(ModelBuilder modelBuilder) {
+      IcedHashMap<String, Object> map = new IcedHashMap<>();
+      
+      map.put("training_frame_checksum", modelBuilder.train().checksum());
+      if (modelBuilder._parms._valid != null) {
+        map.put("validation_frame_checksum", modelBuilder.valid().checksum());
+      }
+      
+      return map;
+    }
+
+    private IcedHashMap<String, Object> createReproducibilityInformationMap(ModelBuilder modelBuilder) {
+      IcedHashMap<String, Object> map = new IcedHashMap<>();
+      map.put("cluster configuration", createClusterConfigurationMap());
+      map.put("node information", createNodeInformationMap());
+      map.put("input frames information", createInputFramesInformationMap(modelBuilder));
+      return map;
     }
   } // Output
 

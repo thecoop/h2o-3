@@ -1,9 +1,6 @@
 package hex.tree;
 
 import hex.*;
-
-import static hex.genmodel.GenModel.createAuxKey;
-
 import hex.genmodel.CategoricalEncoding;
 import hex.genmodel.algos.tree.SharedTreeMojoModel;
 import hex.genmodel.algos.tree.SharedTreeNode;
@@ -23,6 +20,8 @@ import water.util.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import static hex.genmodel.GenModel.createAuxKey;
 
 public abstract class SharedTreeModel<
         M extends SharedTreeModel<M, P, O>,
@@ -173,6 +172,21 @@ public abstract class SharedTreeModel<
       _scored_train = new ScoreKeeper[]{new ScoreKeeper(Double.NaN)};
       _scored_valid = new ScoreKeeper[]{new ScoreKeeper(Double.NaN)};
       _modelClassDist = _priorClassDist;
+    }
+
+    @Override
+    public IcedHashMap<String, Object> createInputFramesInformationMap(ModelBuilder modelBuilder) {
+      IcedHashMap<String, Object> map = new IcedHashMap<>();
+
+      map.put("training_frame_checksum",modelBuilder.train().checksum());
+      SharedTreeParameters params = (SharedTreeParameters) modelBuilder._parms;
+      if (params._valid != null) {
+        map.put("validation_frame_checksum", modelBuilder.valid().checksum());
+      }
+      if (params._calibration_frame != null) {
+        map.put("calibration_frame_checksum", params.getCalibrationFrame().checksum());
+      }
+      return map;
     }
 
     // Append next set of K trees

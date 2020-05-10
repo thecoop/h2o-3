@@ -18,7 +18,7 @@ public class CapabilitiesHandler extends Handler{
     return entries;
   }
 
-  private ArrayList<CapabilityEntryV3> getRestAPIExtensionEntries(){
+  protected ArrayList<CapabilityEntryV3> getRestAPIExtensionEntries(){
     ArrayList<CapabilityEntryV3> entries = new ArrayList<>();
     for(RestApiExtension ext: ExtensionManager.getInstance().getRestApiExtensions()){
       entries.add(new CapabilityEntryV3(ext.getName()));

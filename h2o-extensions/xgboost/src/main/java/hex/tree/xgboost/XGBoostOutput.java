@@ -1,9 +1,11 @@
 package hex.tree.xgboost;
 
 import hex.Model;
+import hex.ModelBuilder;
 import hex.ScoreKeeper;
 import hex.glm.GLMModel;
 import hex.tree.PlattScalingHelper;
+import water.util.IcedHashMap;
 import water.util.TwoDimTable;
 
 import java.util.ArrayList;
@@ -42,6 +44,21 @@ public class XGBoostOutput extends Model.Output implements Model.GetNTrees, Plat
 
   public GLMModel _calib_model;
 
+  @Override
+  public IcedHashMap<String, Object> createInputFramesInformationMap(ModelBuilder modelBuilder) {
+    IcedHashMap<String, Object> map = new IcedHashMap<>();
+
+    map.put("training_frame_checksum",modelBuilder.train().checksum());
+    XGBoostModel.XGBoostParameters params = (XGBoostModel.XGBoostParameters) modelBuilder._parms;
+    if (params._valid != null) {
+      map.put("validation_frame_checksum", modelBuilder.valid().checksum());
+    }
+    if (params._calibration_frame != null) {
+      map.put("calibration_frame_checksum", params.getCalibrationFrame().checksum());
+    }
+    return map;
+  }
+  
   @Override
   public int getNTrees() {
     return _ntrees;

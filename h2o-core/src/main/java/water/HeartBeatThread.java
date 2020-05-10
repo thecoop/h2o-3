@@ -1,10 +1,12 @@
 package water;
 
 import java.lang.management.ManagementFactory;
+import java.util.Locale;
 import javax.management.*;
 import water.util.LinuxProcFileReader;
 import water.util.Log;
 import water.init.*;
+import water.util.OSUtils;
 
 /**
  * Starts a thread publishing multicast HeartBeats to the local subnet: the
@@ -118,7 +120,8 @@ public class HeartBeatThread extends Thread {
         hb._process_total_ticks = -1;
         hb._process_num_open_fds = -1;
       }
-      hb._num_cpus = (short)Runtime.getRuntime().availableProcessors();
+      Runtime runtime = Runtime.getRuntime();
+      hb._num_cpus = (short) runtime.availableProcessors();
       hb._cpus_allowed = (short) lpfr.getProcessCpusAllowed();
       if (H2O.ARGS.nthreads < hb._cpus_allowed) {
         hb._cpus_allowed = H2O.ARGS.nthreads;
@@ -128,6 +131,15 @@ public class HeartBeatThread extends Thread {
         hb._pid = Integer.parseInt(lpfr.getProcessID());
       }
       catch (Exception ignore) {}
+      
+      hb.set_total_mem(runtime.totalMemory());
+      hb.set_max_mem(runtime.maxMemory());
+      hb.set_java_version("Java " + System.getProperty("java.version") + " (from " + System.getProperty("java.vendor") + ")");
+      hb.set_jvm_launch_parameters(ManagementFactory.getRuntimeMXBean().getInputArguments().toString());
+      hb.set_jvm_pid(ManagementFactory.getRuntimeMXBean().getName());
+      hb.set_os_version(System.getProperty("os.name")+" "+System.getProperty("os.version")+" ("+System.getProperty("os.arch")+")");
+      hb.set_machine_psysical_mem(OSUtils.getTotalPhysicalMemory());
+      hb.set_machine_locale(Locale.getDefault().toString());
 
       // Announce what Cloud we think we are in.
       // Publish our health as well.

@@ -200,6 +200,42 @@ public abstract class ModelMojoReader<M extends MojoModel> {
               .build();
       _model._modelAttributes = readModelSpecificAttributes();
     }
+    _model._reproducibilityInformation = readClusterConfiguration();
+  }
+
+  private HashMap<String, Object> jsonToMap(JsonObject jsonObject) {
+    HashMap<String, Object> map = new HashMap<>();
+    for (Map.Entry<String, JsonElement> entry : jsonObject.entrySet()) {
+      JsonElement value = entry.getValue();
+      map.put(entry.getKey(), value.isJsonPrimitive() ? getValue(value) : jsonToMap(value.getAsJsonObject()));
+    }
+    return map;
+  }
+  
+  private Object getValue(JsonElement jsonElement) {
+    if (jsonElement.getAsJsonPrimitive().isNumber()) {
+      if (jsonElement.getAsDouble() - jsonElement.getAsLong() == 0) {
+        return jsonElement.getAsLong();
+      } else {
+        return jsonElement.getAsDouble();
+      }
+    } else if (jsonElement.getAsJsonPrimitive().isBoolean()) {
+      return jsonElement.getAsBoolean();
+    } else if (jsonElement.getAsJsonPrimitive().isString()) {
+      return jsonElement.getAsString();
+    } else {
+      return jsonElement.getAsString();
+    }
+  }
+
+  protected HashMap<String, Object> readClusterConfiguration() {
+    final JsonObject modelJson = ModelJsonReader.parseModelJson(_reader);
+    if (modelJson != null && modelJson.get("output") != null && ((JsonObject) modelJson.get("output")).get("reproducibility_information_map") != null) {
+      // parse configuration from model json
+      JsonObject reproducibilityInfoMapJsonObject = (JsonObject) ((JsonObject) modelJson.get("output")).get("reproducibility_information_map");
+      return jsonToMap(reproducibilityInfoMapJsonObject);
+    }
+    return null;
   }
 
   protected ModelAttributes readModelSpecificAttributes() {

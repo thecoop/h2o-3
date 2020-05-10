@@ -5,6 +5,7 @@ import hex.genmodel.attributes.*;
 import hex.genmodel.attributes.metrics.*;
 import hex.genmodel.descriptor.ModelDescriptor;
 import hex.tree.isofor.ModelMetricsAnomaly;
+import water.util.IcedHashMap;
 import water.util.Log;
 import water.util.TwoDimTable;
 
@@ -21,7 +22,7 @@ public class GenericModelOutput extends Model.Output {
     TwoDimTable _variable_importances;
 
 
-    public GenericModelOutput(final ModelDescriptor modelDescriptor, final ModelAttributes modelAttributes) {
+    public GenericModelOutput(final ModelDescriptor modelDescriptor, final ModelAttributes modelAttributes, final HashMap<String, Object> reproducibilityInformation) {
         _isSupervised = modelDescriptor.isSupervised();
         _domains = modelDescriptor.scoringDomains();
         _origDomains = modelDescriptor.scoringDomains();
@@ -36,6 +37,7 @@ public class GenericModelOutput extends Model.Output {
         _defaultThreshold = modelDescriptor.defaultThreshold();
         _original_model_identifier = modelDescriptor.algoName();
         _original_model_full_name = modelDescriptor.algoFullName();
+        _reproducibility_information_map = convertMap(reproducibilityInformation);
 
         if (modelAttributes != null) {
             _model_summary = convertTable(modelAttributes.getModelSummary());
@@ -51,7 +53,12 @@ public class GenericModelOutput extends Model.Output {
             convertMetrics(modelAttributes, modelDescriptor);
             _scoring_history = convertTable(modelAttributes.getScoringHistory());
         }
+    }
 
+    private IcedHashMap<String, Object> convertMap(Map<String, Object> original) {
+        IcedHashMap<String, Object> result = new IcedHashMap<>();
+        original.forEach((key, value) -> result.put(key, value instanceof Map ? convertMap((Map<String, Object>) value) : value));
+        return result;
     }
 
     private void convertMetrics(final ModelAttributes modelAttributes, final ModelDescriptor modelDescriptor) {
