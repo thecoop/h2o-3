@@ -880,7 +880,6 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
      * Reproducibility information describing the current cluster configuration, each node configuration
      * and checksums for each frame used on the input of the algorithm
      */
-
     public IcedHashMap<String, Object> _reproducibility_information_map;
     
 

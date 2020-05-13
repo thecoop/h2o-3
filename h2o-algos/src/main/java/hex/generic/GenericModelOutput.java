@@ -57,7 +57,10 @@ public class GenericModelOutput extends Model.Output {
 
     private IcedHashMap<String, Object> convertMap(Map<String, Object> original) {
         IcedHashMap<String, Object> result = new IcedHashMap<>();
-        original.forEach((key, value) -> result.put(key, value instanceof Map ? convertMap((Map<String, Object>) value) : value));
+        for (Map.Entry<String, Object> entry : original.entrySet()) {
+            Object value = entry.getValue();
+            result.put(entry.getKey(), value instanceof Map ? convertMap((Map<String, Object>) value) : value);
+        }
         return result;
     }
 
