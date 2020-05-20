@@ -622,17 +622,6 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
         setHGLMInitValues(beta);
         _parms._lambda = new double[]{0}; // disable elastic-net regularization
       } else {
-        GLMGradientInfo ginfo = new GLMGradientSolver(_job, _parms, _dinfo, 0, _state.activeBC(), 
-                _penaltyMatrix, _gamColIndices).getGradient(beta);  // gradient obtained with zero penalty
-        _lmax = lmax(ginfo._gradient);
-        _gmax = _lmax*Math.max(1e-2, _parms._alpha[0]); // each alpha should have its own best lambda
-        _state.setLambdaMax(_lmax);
-        _state.setgMax(_gmax);
-        if (_parms._lambda_min_ratio == -1) {
-          _parms._lambda_min_ratio = (_nobs >> 4) > _dinfo.fullN() ? 1e-4 : 1e-2;
-          if (_parms._alpha[0] == 0)
-            _parms._lambda_min_ratio *= 1e-2; // smalelr lambda min for ridge as we are starting quite high
-        }
         if (_parms._startval != null) { // allow user start set initial beta values
           if (_parms._startval.length != beta.length) {
             StringBuffer sb = new StringBuffer();
@@ -646,8 +635,19 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
                     " to actual GLM coefficient length(" + beta.length + ").\n  The order of coefficients should be" +
                     "the following: "+sb.toString()+".\n  Run your model without specifying startval to find out the " +
                     "actual coefficients names and lengths.");
-          } else 
+          } else
             System.arraycopy(_parms._startval, 0, beta, 0, beta.length);
+        }
+        GLMGradientInfo ginfo = new GLMGradientSolver(_job, _parms, _dinfo, 0, _state.activeBC(), 
+                _penaltyMatrix, _gamColIndices).getGradient(beta);  // gradient obtained with zero penalty
+        _lmax = lmax(ginfo._gradient);
+        _gmax = _lmax*Math.max(1e-2, _parms._alpha[0]); // each alpha should have its own best lambda
+        _state.setLambdaMax(_lmax);
+        _state.setgMax(_gmax);
+        if (_parms._lambda_min_ratio == -1) {
+          _parms._lambda_min_ratio = (_nobs >> 4) > _dinfo.fullN() ? 1e-4 : 1e-2;
+          if (_parms._alpha[0] == 0)
+            _parms._lambda_min_ratio *= 1e-2; // smalelr lambda min for ridge as we are starting quite high
         }
         _betaStart = new double[beta.length];
         System.arraycopy(beta, 0, _betaStart, 0, beta.length);
