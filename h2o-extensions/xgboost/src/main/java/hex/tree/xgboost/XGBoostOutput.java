@@ -5,10 +5,10 @@ import hex.ModelBuilder;
 import hex.ScoreKeeper;
 import hex.glm.GLMModel;
 import hex.tree.PlattScalingHelper;
-import water.util.IcedHashMap;
 import water.util.TwoDimTable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class XGBoostOutput extends Model.Output implements Model.GetNTrees, PlattScalingHelper.OutputWithCalibration {
@@ -53,6 +53,7 @@ public class XGBoostOutput extends Model.Output implements Model.GetNTrees, Plat
 
     colHeaders.add("Input Frame"); colTypes.add("string"); colFormat.add("%s");
     colHeaders.add("Checksum"); colTypes.add("long"); colFormat.add("%d");
+    colHeaders.add("ESPC"); colTypes.add("string"); colFormat.add("%d");
 
     final int rows = 3;
     TwoDimTable table = new TwoDimTable(
@@ -69,6 +70,9 @@ public class XGBoostOutput extends Model.Output implements Model.GetNTrees, Plat
     table.set(0, 1, modelBuilder.train() != null ? modelBuilder.train().checksum() : -1);
     table.set(1, 1, params._valid != null ? modelBuilder.valid().checksum() : -1);
     table.set(2, 1, params.getCalibrationFrame() != null ? params.getCalibrationFrame().checksum() : -1);
+    table.set(0, 2, modelBuilder.train() != null ? Arrays.toString(modelBuilder.train().anyVec().espc()) : -1);
+    table.set(1, 2, params._valid != null ? Arrays.toString(modelBuilder.valid().anyVec().espc()) : -1);
+    table.set(2, 2, params.getCalibrationFrame() != null ? Arrays.toString(params.getCalibrationFrame().anyVec().espc()) : -1);
 
     return table;
   }

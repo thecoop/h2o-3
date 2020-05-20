@@ -1111,6 +1111,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
 
       colHeaders.add("Input Frame"); colTypes.add("string"); colFormat.add("%s");
       colHeaders.add("Checksum"); colTypes.add("long"); colFormat.add("%d");
+      colHeaders.add("ESPC"); colTypes.add("string"); colFormat.add("%d");
 
       final int rows = 2;
       TwoDimTable table = new TwoDimTable(
@@ -1125,6 +1126,8 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
       table.set(1, 0, "validation_frame");
       table.set(0, 1, modelBuilder.train() != null ? modelBuilder.train().checksum() : -1);
       table.set(1, 1, modelBuilder._valid != null ? modelBuilder.valid().checksum() : -1);
+      table.set(0, 2, modelBuilder.train() != null ? Arrays.toString(modelBuilder.train().anyVec().espc()) : -1);
+      table.set(1, 2, modelBuilder._valid != null ? Arrays.toString(modelBuilder.valid().anyVec().espc()) : -1);
 
       return table;
     }
