@@ -642,9 +642,9 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
               sb.append(" ");
             }
             sb.append("Intercept.");
-            throw new IllegalArgumentException("Initial coefficient length (" + _parms._startval.length + ")does not equal" +
+            throw new IllegalArgumentException("Initial coefficient length (" + _parms._startval.length + ") does not equal" +
                     " to actual GLM coefficient length(" + beta.length + ").\n  The order of coefficients should be" +
-                    "the following: "+sb.toString()+".  Run your model without specifying startval to find out the " +
+                    "the following: "+sb.toString()+".\n  Run your model without specifying startval to find out the " +
                     "actual coefficients names and lengths.");
           } else 
             System.arraycopy(_parms._startval, 0, beta, 0, beta.length);

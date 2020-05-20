@@ -1238,7 +1238,7 @@ class H2OGeneralizedLinearEstimator(H2OEstimator):
     @property
     def startval(self):
         """
-        double array to initialize fixed and random coefficients for HGLM.
+        double array to initialize fixed and random coefficients for HGLM, coefficients for GLM.
 
         Type: ``List[float]``.
         """
