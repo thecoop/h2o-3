@@ -88,6 +88,8 @@
 #'        to FALSE.
 #' @param prior Prior probability for y==1. To be used only for logistic regression iff the data has been sampled and the mean
 #'        of response does not reflect reality. Defaults to -1.
+#' @param cold_start \code{Logical}. If true will start GLM model from scratch, otherwise, will build from previous results
+#'        Defaults to FALSE.
 #' @param lambda_min_ratio Minimum lambda used in lambda search, specified as a ratio of lambda_max (the smallest lambda that drives all
 #'        coefficients to zero). Default indicates: if the number of observations is greater than the number of
 #'        variables, then lambda_min_ratio is set to 0.0001; if the number of observations is less than the number of
@@ -196,6 +198,7 @@ h2o.glm <- function(x,
                     calc_like = FALSE,
                     HGLM = FALSE,
                     prior = -1,
+                    cold_start = FALSE,
                     lambda_min_ratio = -1,
                     beta_constraints = NULL,
                     max_active_predictors = -1,
@@ -331,6 +334,8 @@ h2o.glm <- function(x,
     parms$HGLM <- HGLM
   if (!missing(prior))
     parms$prior <- prior
+  if (!missing(cold_start))
+    parms$cold_start <- cold_start
   if (!missing(lambda_min_ratio))
     parms$lambda_min_ratio <- lambda_min_ratio
   if (!missing(max_active_predictors))
@@ -425,6 +430,7 @@ h2o.glm <- function(x,
                                     calc_like = FALSE,
                                     HGLM = FALSE,
                                     prior = -1,
+                                    cold_start = FALSE,
                                     lambda_min_ratio = -1,
                                     beta_constraints = NULL,
                                     max_active_predictors = -1,
@@ -565,6 +571,8 @@ h2o.glm <- function(x,
     parms$HGLM <- HGLM
   if (!missing(prior))
     parms$prior <- prior
+  if (!missing(cold_start))
+    parms$cold_start <- cold_start
   if (!missing(lambda_min_ratio))
     parms$lambda_min_ratio <- lambda_min_ratio
   if (!missing(max_active_predictors))

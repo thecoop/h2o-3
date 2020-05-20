@@ -229,6 +229,7 @@ public class GLMModel extends Model<GLMModel,GLMModel.GLMParameters,GLMModel.GLM
     public double _prior = -1;
     public boolean _lambda_search = false;
     public boolean _HGLM = false; // true to enable HGLM
+    public boolean _cold_start = false; // start GLM model from scratch if true
     public int _nlambdas = -1;
     public boolean _non_negative = false;
     public double _lambda_min_ratio = -1; // special

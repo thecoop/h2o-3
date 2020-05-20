@@ -37,7 +37,7 @@ class H2OGeneralizedLinearEstimator(H2OEstimator):
                    "lambda_search", "early_stopping", "nlambdas", "standardize", "missing_values_handling",
                    "plug_values", "compute_p_values", "remove_collinear_columns", "intercept", "non_negative",
                    "max_iterations", "objective_epsilon", "beta_epsilon", "gradient_epsilon", "link", "rand_link",
-                   "startval", "calc_like", "HGLM", "prior", "lambda_min_ratio", "beta_constraints",
+                   "startval", "calc_like", "HGLM", "prior", "cold_start", "lambda_min_ratio", "beta_constraints",
                    "max_active_predictors", "interactions", "interaction_pairs", "obj_reg", "export_checkpoints_dir",
                    "balance_classes", "class_sampling_factors", "max_after_balance_size", "max_confusion_matrix_size",
                    "max_hit_ratio_k", "max_runtime_secs", "custom_metric_func"}
@@ -1308,6 +1308,21 @@ class H2OGeneralizedLinearEstimator(H2OEstimator):
     def prior(self, prior):
         assert_is_type(prior, None, numeric)
         self._parms["prior"] = prior
+
+
+    @property
+    def cold_start(self):
+        """
+        If true will start GLM model from scratch, otherwise, will build from previous results
+
+        Type: ``bool``  (default: ``False``).
+        """
+        return self._parms.get("cold_start")
+
+    @cold_start.setter
+    def cold_start(self, cold_start):
+        assert_is_type(cold_start, None, bool)
+        self._parms["cold_start"] = cold_start
 
 
     @property

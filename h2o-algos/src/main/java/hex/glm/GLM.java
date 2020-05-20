@@ -383,6 +383,7 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
   private transient GLMModel _model;
   GLMGradientInfo _ginfoStart;
   double _betaDiffStart;
+  double[] _betaStart;
   
   @Override
   public int nclasses() {
@@ -632,6 +633,24 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
           if (_parms._alpha[0] == 0)
             _parms._lambda_min_ratio *= 1e-2; // smalelr lambda min for ridge as we are starting quite high
         }
+        if (_parms._startval != null) { // allow user start set initial beta values
+          if (_parms._startval.length != beta.length) {
+            StringBuffer sb = new StringBuffer();
+            String[] coeffNames = _dinfo._adaptedFrame._names;
+            for(int i = 0; i < coeffNames.length; i++) {
+              sb.append(coeffNames[i]);
+              sb.append(" ");
+            }
+            sb.append("Intercept.");
+            throw new IllegalArgumentException("Initial coefficient length (" + _parms._startval.length + ")does not equal" +
+                    " to actual GLM coefficient length(" + beta.length + ").\n  The order of coefficients should be" +
+                    "the following: "+sb.toString()+".  Run your model without specifying startval to find out the " +
+                    "actual coefficients names and lengths.");
+          } else 
+            System.arraycopy(_parms._startval, 0, beta, 0, beta.length);
+        }
+        _betaStart = new double[beta.length];
+        System.arraycopy(beta, 0, _betaStart, 0, beta.length);
         _state.updateState(beta, ginfo);
         if (_parms._lambda == null) {  // no lambda given, we will base lambda as a fraction of lambda max
           if (_parms._lambda_search) {
@@ -2017,7 +2036,7 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
     }
 
     private void coldStart() {
-      _state.setBeta(getNullBeta());  // reset beta to original starting condition except when lambda search is enabled
+      _state.setBeta(_betaStart);  // reset beta to original starting condition except when lambda search is enabled
       _state.setIter(0);
       _state.setLambda(0.0);  // reset to 0 before new lambda is assigned
       _state._currGram = null;
@@ -2026,9 +2045,10 @@ public class GLM extends ModelBuilder<GLMModel,GLMParameters,GLMOutput> {
       _state.setGinfo(_ginfoStart);
       _state.setLikelihood(_ginfoStart._likelihood);
     }
+    
     protected Submodel computeSubmodel(int i,double lambda) {
       Submodel sm;
-      if (!_parms._lambda_search) { // disable warm start for non lambda search runs
+      if (_parms._cold_start || !_parms._lambda_search) { // default: cold_start for non lambda_search
         coldStart();
       }
       if(lambda >= _lmax && _state.l1pen() > 0)
